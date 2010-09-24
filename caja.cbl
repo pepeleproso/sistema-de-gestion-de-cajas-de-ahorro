@@ -37,7 +37,10 @@
 			02 NOMBRE PIC A(20).
 			02 DOMICILIO PIC X(20).
 			02 TELEFONO PIC X(20).
-
+      *ESTADO DEL CLIENTE PUEDE SER:
+      *"A" ->ACTIVO
+      *"B" -> DADO DE BAJA
+			02 ESTADO PIC A.
         FD CUENTAS
 		LABEL RECORD IS STANDARD
 		DATA RECORD IS REG-CUENTA.
@@ -48,7 +51,6 @@
 			02 SALDO PIC 9(7)v99.
       * CON FORMATO AAAAMMDD
 			02 FECHA-CREACION PIC 9(8).
-			02 FECHA-BAJA PIC 9(8).
 			02 CANT-TRANSACIONES PIC 9(8).
 
 	WORKING-STORAGE SECTION.
@@ -57,9 +59,11 @@
 	77 SK PIC XX VALUE SPACES.
 	77 opt PIC 9.
 	77 busca-cli PIC 9(8).
+	77 action PIC A.
       * Usado como bandera para operacion de busqueda.
 	77 find-code PIC A.
 	77 MAX-CUENTA PIC 9(8) VALUE 99999999.
+	77 NOMBRE-COMPLETO PIC A(40).
 	PROCEDURE DIVISION.
 	INICIO.
 		PERFORM MENU-ADMINISTRADOR UNTIL opt = 5.
@@ -79,7 +83,7 @@
 		DISPLAY RAYA.
 		DISPLAY "MENU:".
 		DISPLAY "1) Alta de Cliente".
-		DISPLAY "2) Baja de Cliente".
+		DISPLAY "2) Activacion/Desactivacion de Cliente".
 		DISPLAY "3) Consultar Cliente".
 		DISPLAY "4) Estadisticas".
 		DISPLAY "5) Salir".
@@ -93,7 +97,9 @@
 			CLOSE CLIENTES
 			CLOSE CUENTAS
 			WHEN 2
-			PERFORM STUB
+			OPEN I-O CLIENTES
+			PERFORM BAJA
+			CLOSE CLIENTES
 			WHEN 3
 			PERFORM STUB
 			WHEN 4
@@ -123,29 +129,9 @@
 		IF find-code IS = "T" THEN
 		PERFORM ERROR-CLIENTE-EXISTE
 		ELSE
-      * Leo el nombre del teclado hasta que sea <> de ESPACIO.
-		MOVE SPACE TO NOMBRE
-		PERFORM UNTIL NOT NOMBRE IS = SPACE
-		DISPLAY "Ingrese Nombre Cliente: " WITH NO ADVANCING
-		ACCEPT NOMBRE NO BEEP
-		END-PERFORM
-      * Convierto a mayusculas antes de guardar para una mejor comparacion.
-		INSPECT NOMBRE CONVERTING "asdfgñlkjhqwertpoiuyzxcvmnb" 
-	TO "ASDFGÑLKJHQWERTPOIUYZXCVMNB"
-		MOVE SPACE TO APELLIDO
-		PERFORM UNTIL NOT APELLIDO IS = SPACE
-		DISPLAY "Ingrese Apellido: " WITH NO ADVANCING
-		ACCEPT APELLIDO  NO BEEP
-		END-PERFORM
-		INSPECT APELLIDO CONVERTING "asdfgñlkjhqwertpoiuyzxcvmnb" 
-	TO "ASDFGÑLKJHQWERTPOIUYZXCVMNB"
-      * El Telefono no es un campo obligatorio por eso no se valida.
-		DISPLAY "Ingrese Telefono: " WITH NO ADVANCING
-		ACCEPT TELEFONO NO BEEP
-      * Guardo el registro en caso de error notifico al usuario.
-		WRITE REG-CLIENTE INVALID KEY PERFORM ERROR-CLIENTE-EXISTE
+		PERFORM ALTA-DAT-PERS
       * Dar de alta la nueva cuenta
-		PERFORM ALTA-CUENTA
+		PERFORM	ALTA-CUENTA
 		END-IF.
 		DISPLAY SPACES ERASE.
 		MOVE "A" TO CORTE.
@@ -153,6 +139,36 @@
 		DISPLAY "Desea cargar otro cliente? (S/N) "
 		ACCEPT CORTE NO BEEP
 		END-PERFORM.
+	
+	ALTA-DAT-PERS.
+      * Leo el nombre del teclado hasta que sea <> de ESPACIO.
+		MOVE SPACE TO NOMBRE.
+		PERFORM UNTIL NOT NOMBRE IS = SPACE
+		DISPLAY "Ingrese Nombre: " WITH NO ADVANCING
+		ACCEPT NOMBRE NO BEEP
+		END-PERFORM.
+      * Convierto a mayusculas antes de guardar para una mejor comparacion.
+		INSPECT NOMBRE CONVERTING "asdfgñlkjhqwertpoiuyzxcvmnb" 
+	TO "ASDFGÑLKJHQWERTPOIUYZXCVMNB"
+		MOVE SPACE TO APELLIDO.
+		PERFORM UNTIL NOT APELLIDO IS = SPACE
+		DISPLAY "Ingrese Apellido: " WITH NO ADVANCING
+		ACCEPT APELLIDO  NO BEEP
+		END-PERFORM.
+		INSPECT APELLIDO CONVERTING "asdfgñlkjhqwertpoiuyzxcvmnb" 
+	TO "ASDFGÑLKJHQWERTPOIUYZXCVMNB".
+		MOVE SPACE TO DOMICILIO.
+		PERFORM UNTIL NOT DOMICILIO IS = SPACE
+		DISPLAY "Ingrese Domicilio: " WITH NO ADVANCING
+		ACCEPT DOMICILIO  NO BEEP
+		END-PERFORM.
+      * El Telefono no es un campo obligatorio por eso no se valida.
+		DISPLAY "Ingrese Telefono: " WITH NO ADVANCING.
+		ACCEPT TELEFONO NO BEEP.
+		MOVE "A" TO ESTADO.
+      * Guardo el registro en caso de error notifico al usuario
+		WRITE REG-CLIENTE INVALID KEY 
+			PERFORM ERROR-CLIENTE-EXISTE.
       *###########################################
       * ALTA-CUENTA
       * Da de alta una nueva cuenta, y la asocia al cliente actual
@@ -168,10 +184,10 @@
 		ADD 1 TO NRO.
 		MOVE DNI TO DNI-CLI.
 		MOVE 0 TO SALDO.
-		MOVE 0 TO FECHA-BAJA.
 		MOVE 0 TO CANT-TRANSACIONES.
       * leo la fecha de creacion desde el sistema
 		ACCEPT FECHA-CREACION FROM DATE.
+		ACCEPT find-code.
 		WRITE REG-CUENTA INVALID KEY PERFORM ERROR-CUENTA-EXISTE.
 		
 	BUSCAR.
@@ -185,6 +201,55 @@
       * registro entonces terminamos el proceso mostrando que la busqueda no tuvo exito
 		READ CLIENTES RECORD INTO REG-CLIENTE KEY IS DNI.
 		MOVE "T" TO find-code.
+
+	BAJA.
+		DISPLAY SPACES ERASE LINE 1.
+		DISPLAY "SISTEMA DE GESTION DE CAJA DE AHORRO".
+		DISPLAY RAYA.
+		DISPLAY "ACTIVACION / DESACTIVACION DE CLIENTES".
+		DISPLAY RAYA.
+      * Fuerzo el valor 0 para el DNI.
+		MOVE 0 TO DNI.
+		PERFORM UNTIL DNI > 0
+		DISPLAY "Ingrese DNI: " WITH NO ADVANCING
+		ACCEPT DNI NO BEEP
+		END-PERFORM.
+		PERFORM BUSCAR.
+		IF find-code IS = "F" THEN
+		PERFORM ERROR-NOT-FOUND
+		ELSE
+		MOVE "A" TO action
+		IF ESTADO IS = "A" THEN
+		PERFORM PREG-BAJA UNTIL action is = "Y" 
+	or action is = "N"
+		IF action IS = "Y" THEN
+		MOVE "B" TO ESTADO
+		REWRITE REG-CLIENTE
+		DISPLAY "La operacion se realizo con exito"
+		END-IF
+		ELSE
+		PERFORM PREG-REHABILITAR UNTIL action is = "Y" 
+	or action is = "N"
+		IF action IS = "Y" THEN
+		MOVE "A" TO ESTADO
+		REWRITE REG-CLIENTE
+		DISPLAY "La operacion se realizo con exito"
+		END-IF.
+
+	PREG-BAJA.
+		STRING NOMBRE DELIMITED BY "  "
+		", " DELIMITED BY SIZE
+		APELLIDO DELIMITED BY "  "
+		INTO NOMBRE-COMPLETO
+		DISPLAY "¿Desea dar de baja al Cliente: " NOMBRE-COMPLETO "? Y/N".
+		ACCEPT action NO BEEP.
+	PREG-REHABILITAR.
+		STRING NOMBRE DELIMITED BY "  "
+		", " DELIMITED BY SIZE
+		APELLIDO DELIMITED BY "  "
+		INTO NOMBRE-COMPLETO
+		DISPLAY "¿Desea rehabilitar el Cliente: " NOMBRE-COMPLETO "? Y/N".
+		ACCEPT action NO BEEP.
 
 	STUB.
 		DISPLAY "NO IMPLEMENTADO".
@@ -200,3 +265,4 @@
 
 	ERROR-NOT-FOUND.
 		DISPLAY "NO SE ENCONTRO UN CLIENTE CON DNI = " DNI.
+

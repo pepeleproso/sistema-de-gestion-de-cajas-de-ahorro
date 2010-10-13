@@ -16,7 +16,7 @@
 		RECORD KEY IS DNI
 		FILE STATUS IS SK.
 
-		SELECT OPTIONAL CUENTAS ASSIGN 
+		SELECT OPTIONAL CUENTAS ASSIGN
         TO DISK  "CUENTAS.DAT"
 		ORGANIZATION IS INDEXED
 		ACCESS MODE IS DYNAMIC 
@@ -27,6 +27,13 @@
 		SELECT OPTIONAL POLITICAS ASSIGN TO "POLITICAS.DAT"
 		FILE STATUS IS SK.
 
+		SELECT OPTIONAL OPERACIONES ASSIGN
+        TO DISK  "OPERACIONES.DAT"
+		ORGANIZATION IS INDEXED
+		ACCESS MODE IS DYNAMIC 
+		RECORD KEY IS NRO-OP
+		FILE STATUS IS SK.
+	
 	DATA DIVISION.
 	FILE SECTION.
         FD CLIENTES
@@ -54,18 +61,27 @@
 			02 SALDO PIC 9(7)v99.
       * CON FORMATO AAAAMMDD
 			02 FECHA-CREACION PIC 9(8).
-			02 CANT-TRANSACIONES PIC 9(8).
 
 	FD POLITICAS DATA RECORD IS REG-POLITICAS.
 	01 REG-POLITICAS.
 			02 PORC-COMISION PIC 9(2).
             02 PORC-INTERES PIC 9(2).
 
+	FD OPERACIONES DATA RECORD IS REG-OPERACIONES.
+	01 REG-OPERACIONES.
+			02 NRO-OP PIC 9(8).
+            02 NRO-CUENTA PIC 9(8).
+            02 T-OPERACION PIC 9.
+            02 IMPORTE PIC 9(7)v99.
+            02 CTA-ORIGEN PIC 9(8).
+            02 FECHA-OP PIC 9(8).
+
 	WORKING-STORAGE SECTION.
 	01 RAYA PIC X(40) VALUE ALL "-".
 	01 CORTE PIC A.
 	77 SK PIC XX VALUE SPACES.
 	77 opt PIC 9.
+	77 optc PIC 9.
 	77 busca-cli PIC 9(8).
 	77 action PIC A.
 	77 SALDO-ED PIC $(7)9,99.
@@ -80,10 +96,28 @@
 		02 DIA PIC 9(2).
       *full fecha tiene formato DD/MM/AAAA
 	77 FULL-FECHA PIC X(10).
+      *TIPOS DE OPERACIONES:
+      * Extraccion
+      * Deposito
+      * Deposito cheque
+      * Transferencia de Fondos
+      * Debito
+      * Acreditación de intereses
+      * Debito Comisión
+	01 TIPO-OPERACION.
+         02 T-OP OCCURS 7 TIMES.
+               05 DESCRIPCION PIC X(35).
+	77 COMISION PIC 99.
 	PROCEDURE DIVISION.
 	INICIO.
-		PERFORM MENU-ADMINISTRADOR UNTIL opt = 5.
+      *PERFORM MENU-ADMINISTRADOR UNTIL opt = 5.
+		PERFORM MENU-CLIENTE UNTIL opt = 5.
 		STOP RUN.
+
+      *###############################
+      *SECCION ADMINSTRADOR
+      *###############################
+
       *  MENU-ADMINISTRADOR
       * Muestra el menu con las acciones que puede realizar un usuario administrador
       * Estas acciones no puede ser realizadas por el cliente.
@@ -198,7 +232,6 @@
 		ADD 1 TO NRO.
 		MOVE DNI TO DNI-CLI.
 		MOVE 0 TO SALDO.
-		MOVE 0 TO CANT-TRANSACIONES.
       * leo la fecha de creacion desde el sistema
 		ACCEPT FECHA-CREACION FROM DATE.
 		ACCEPT find-code.
@@ -362,3 +395,150 @@
 
 	ERROR-NOT-FOUND.
 		DISPLAY "NO SE ENCONTRO UN CLIENTE CON DNI = " DNI.
+
+      *###############################
+      *SECCION CLIENTE
+      *###############################
+
+
+      *###############################
+      * CARGA-OPERACIONES
+      * Inicializo el array con las operaciones.
+      * El indice se usa como ID para las operaciones.
+      *###############################
+	CARGA-OPERACIONES.
+		MOVE 1 TO opt.
+      * ID = 1
+		MOVE "Extraccion" TO DESCRIPCION(opt).
+		ADD 1 TO opt.
+      * ID = 2
+		MOVE "Deposito" TO DESCRIPCION(opt).
+		ADD 1 TO opt.
+      * ID = 3
+		MOVE "Deposito cheque" TO DESCRIPCION(opt).
+		ADD 1 TO opt.
+      * ID = 4
+		MOVE "Transferencia de Fondos" TO DESCRIPCION(opt).
+		ADD 1 TO opt.
+      * ID = 5
+		MOVE "Debito" TO DESCRIPCION(opt).
+		ADD 1 TO opt.
+      * ID = 6
+		MOVE "Acreditacion de intereses" TO DESCRIPCION(opt).
+		ADD 1 TO opt.
+      * ID = 7
+		MOVE "Debito Comision" TO DESCRIPCION(opt).
+
+      *  MENU-CLIENTE
+      * Muestra el menu con las acciones que puede realizar un cliente
+      * La opcion 5 sale del programa.
+
+      * #TODO:: FALTA OBTENER EL NOMBRE DEL USUARIO, 
+      * para mostrar en el menu
+	 MENU-CLIENTE.
+		DISPLAY SPACES ERASE LINE 1.
+		DISPLAY "SISTEMA DE GESTION DE CAJA DE AHORRO".
+		DISPLAY RAYA.
+		DISPLAY "Bienvenido Juan, Perez".
+		DISPLAY RAYA.
+		DISPLAY "MENU:".
+		DISPLAY "1) Depositar".
+		DISPLAY "2) Realizar Extracion".
+		DISPLAY "3) Realizar Transferencia".
+		DISPLAY "4) Liquidación Mensual".
+		DISPLAY "5) Salir".
+		ACCEPT opt LINE 13 NO BEEP.
+		EVALUATE opt 
+            WHEN 1
+      * hay que buscar los datos del cliente / cuenta (pantalla login)
+			PERFORM MENU-DEPOSITAR
+			WHEN 2
+			PERFORM STUB
+			WHEN 3
+			PERFORM STUB
+			WHEN 4
+			PERFORM STUB.
+
+	MENU-DEPOSITAR.
+		DISPLAY SPACES ERASE LINE 1.
+		DISPLAY "SISTEMA DE GESTION DE CAJA DE AHORRO".
+		DISPLAY RAYA.
+		DISPLAY "DEPOSITO DE FONDOS".
+		DISPLAY RAYA.
+		DISPLAY "SELECCIONE EL TIPO DE DEPOSITO A REALIZAR:".
+		DISPLAY "1) Efectivo".
+		DISPLAY "2) Cheque".
+		DISPLAY "3) Salir".
+		MOVE 0 TO optc.
+		PERFORM UNTIL optc > 0 AND optc < 4
+		ACCEPT optc NO BEEP
+		END-PERFORM.
+		OPEN I-O CLIENTES.
+		OPEN I-O CUENTAS.
+		OPEN I-O OPERACIONES.
+		EVALUATE optc
+            WHEN 1
+      * para efectivo
+			MOVE 0 TO COMISION
+			PERFORM DEPOSITO
+			WHEN 2
+			MOVE PORC-COMISION TO COMISION
+      *para cheque
+			PERFORM DEPOSITO.
+		CLOSE CLIENTES.
+		CLOSE CUENTAS.
+		CLOSE OPERACIONES.
+
+      * DEPOSITO
+      * Da de alta un nuevo deposito.
+      * Por los cheques aplica un porcentaje de comision.
+      * luego de realizada la operacion actualiza.
+      * el saldo de la cuenta.
+	DEPOSITO.
+      * Fuerzo el valor 0 para el DNI.
+		MOVE 0 TO DNI.
+		PERFORM UNTIL DNI > 0
+		DISPLAY "Ingrese DNI: " WITH NO ADVANCING
+		ACCEPT DNI NO BEEP
+		END-PERFORM.
+		PERFORM BUSCAR.
+		IF find-code IS = "F" THEN
+		PERFORM ERROR-NOT-FOUND
+		ELSE
+		MOVE DNI TO DNI-CLI
+		START CUENTAS KEY IS = DNI-CLI
+		READ CUENTAS NEXT RECORD
+      * BUSCO el ultimo numero de cuenta y le sumo 1.
+		MOVE MAX-CUENTA TO NRO-OP
+		START OPERACIONES KEY IS LESS NRO-OP
+		INVALID KEY MOVE 0 TO NRO-OP END-START
+		IF NOT NRO-OP IS = 0 THEN
+		READ OPERACIONES NEXT RECORD AT END MOVE 0 TO NRO-OP
+      	END-IF
+		ADD 1 TO NRO-OP
+      * leo la fecha desde el sistema
+		ACCEPT FECHA-OP FROM DATE
+		MOVE NRO TO NRO-CUENTA
+		MOVE 3 TO T-OPERACION
+		MOVE 0 TO CTA-ORIGEN
+		MOVE 0 TO DNI
+      *cargo importe
+		MOVE 0 TO IMPORTE
+		PERFORM UNTIL IMPORTE > 0
+		DISPLAY "Ingrese Importe a Depositar" WITH NO ADVANCING
+		ACCEPT IMPORTE
+		END-PERFORM
+		COMPUTE SALDO = SALDO + IMPORTE - IMPORTE * COMISION / 100
+		REWRITE REG-CUENTA
+		WRITE REG-OPERACIONES
+		DISPLAY SPACES ERASE LINE 1
+		DISPLAY "SISTEMA DE GESTION DE CAJA DE AHORRO"
+		DISPLAY RAYA
+		DISPLAY "DEPOSITO DE FONDOS"
+		DISPLAY RAYA
+		MOVE IMPORTE TO SALDO-ED
+		DISPLAY	"Se depositaron " SALDO-ED
+		MOVE SALDO TO SALDO-ED
+		DISPLAY "Su saldo es de " SALDO-ED
+		END-IF.
+	

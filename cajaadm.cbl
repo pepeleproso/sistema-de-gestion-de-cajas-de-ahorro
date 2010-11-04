@@ -99,35 +99,49 @@
 
       * parte de declaracion de ventanas
 	01 WCB.
-		03 WCB-HANDLE		PIC 999 BINARY VALUE 0.
-		03 WCB-NUM-ROWS		PIC 999 BINARY.
-		03 WCB-NUM-COLS		PIC 999 BINARY.
-		03 WCB-LOCATION-REFERENCE		PIC X.
+		03 WCB-HANDLE PIC 999 BINARY VALUE 0.
+		03 WCB-NUM-ROWS PIC 999 BINARY.
+		03 WCB-NUM-COLS PIC 999 BINARY.
+		03 WCB-LOCATION-REFERENCE PIC X.
 			88 WCB-LOCATION-SCREEN-RELATIVE	VALUE "S".
 			88 WCB-LOCATION-WINDOW-RELATIVE	VALUE "W".
-		03 WCB-BORDER-SWITCH	PIC X.
+		03 WCB-BORDER-SWITCH PIC X.
 			88 WCB-BORDER-ON	VALUE "Y" WHEN FALSE "N".
 
-		03 WCB-BORDER-TYPE		PIC 9.
-		03 WCB-BORDER-CHAR		PIC X.
-		03 WCB-FILL-SWITCH		PIC X.
-			88 WCB-FILL-ON		VALUE "Y" WHEN FALSE "N".
+		03 WCB-BORDER-TYPE PIC 9.
+		03 WCB-BORDER-CHAR PIC X.
+		03 WCB-FILL-SWITCH PIC X.
+			88 WCB-FILL-ON VALUE "Y" WHEN FALSE "N".
 
-		03 WCB-FILL-CHAR			PIC X.
+		03 WCB-FILL-CHAR PIC X.
 		03 WCB-TITLE-LOCATION	PIC X.
 			88 WCB-TITLE-TOP		VALUE "T".
 			88 WCB-TITLE-BOTTOM		VALUE "B".
 		03 WCB-TITLE-POSITION	PIC X.
-			88 WCB-TITLE-CENTER		VALUE "C".
-			88 WCB-TITLE-LEFT			VALUE "L".
-			88 WCB-TITLE-RIGHT		VALUE "R".
-		03 WCB-TITLE-LENGHT		PIC 999 BINARY.
-		03 WCB-TITLE				PIC X(64).
+			88 WCB-TITLE-CENTER VALUE "C".
+			88 WCB-TITLE-LEFT VALUE "L".
+			88 WCB-TITLE-RIGHT VALUE "R".
+		03 WCB-TITLE-LENGHT PIC 999 BINARY.
+		03 WCB-TITLE PIC X(64).
         
 	SCREEN SECTION.
 	01 SC-DNI.
 		02 FILLER  PIC 9(8)
-				TO DNI LINE 5 COL 14 REQUIRED.
+				TO DNI LINE 5 COL 16 
+                REQUIRED.
+
+	01 SC-DATOSCLI.
+		02 FILLER  PIC A(20)
+				TO APELLIDO LINE 6 COL 21
+                REQUIRED.
+        02 FILLER  PIC A(20)
+				TO NOMBRE LINE 7 COL 19
+                REQUIRED.
+        02 FILLER  PIC X(20)
+				TO DOMICILIO LINE 8 COL 22 
+                REQUIRED.
+        02 FILLER  PIC X(20)
+				TO TELEFONO LINE 9 COL 21.
 
 	PROCEDURE DIVISION.
 	INICIO.
@@ -143,9 +157,9 @@
 
       *  MENU-ADMINISTRADOR
       * Muestra el menu con las acciones que puede realizar un usuario administrador
-      * Estas acciones no puede ser realizadas por el cliente.
       * La opcion 5 sale del programa.
 	MENU-ADMINISTRADOR.
+		DISPLAY SPACES ERASE LINE 1 LOW.
 		DISPLAY RAYA LINE 1 COL 2 LOW.
 		DISPLAY "Bienvenido" COL 2 LOW.
 		DISPLAY RAYA COL 2 LOW.
@@ -186,54 +200,38 @@
       * Fuerzo el valor 0 para el DNI.
 		MOVE 0 TO DNI.
 		PERFORM UNTIL DNI > 0
-		DISPLAY "Ingrese DNI: " LOW WITH NO ADVANCING
+		DISPLAY "Ingrese DNI: "  COL 3 LOW
 		ACCEPT SC-DNI
 		END-PERFORM.
       * Busco si ya esta cargado.
 		PERFORM BUSCAR.
 		IF find-code IS = "T" THEN
-		PERFORM ERROR-CLIENTE-EXISTE
+		DISPLAY "EL CLIENTE YA EXISTE" LINE 6 COL 3 LOW
 		ELSE
 		PERFORM ALTA-DAT-PERS
       * Dar de alta la nueva cuenta
-		PERFORM	ALTA-CUENTA
+		PERFORM ALTA-CUENTA
 		END-IF.
-		DISPLAY SPACES ERASE LINE 1.
 		MOVE "A" TO CORTE.
 		PERFORM UNTIL CORTE IS = "S" OR CORTE IS = "N"
-		DISPLAY "Desea cargar otro cliente? (S/N) "
-		ACCEPT CORTE NO BEEP
+		DISPLAY "Desea cargar otro cliente? (S/N) " LINE 22 COL 3 LOW
+		ACCEPT CORTE NO BEEP LINE 22 COL 36 LOW
 		END-PERFORM.
 	
 	ALTA-DAT-PERS.
-      * Leo el nombre del teclado hasta que sea <> de ESPACIO.
-		MOVE SPACE TO NOMBRE.
-		PERFORM UNTIL NOT NOMBRE IS = SPACE
-		DISPLAY "Ingrese Nombre: " WITH NO ADVANCING
-		ACCEPT NOMBRE NO BEEP
-		END-PERFORM.
+		DISPLAY "Ingrese Apellido: " LINE 6 COL 3 LOW.
+		DISPLAY "Ingrese Nombre: " LINE 7 COL 3 LOW.
+		DISPLAY "Ingrese Domicilio: " LINE 8 COL 3 LOW.
+		DISPLAY "Ingrese Telefono: " LINE 9 COL 3 LOW.
+		ACCEPT SC-DATOSCLI.
       * Convierto a mayusculas antes de guardar para una mejor comparacion.
 		INSPECT NOMBRE CONVERTING "asdfgñlkjhqwertpoiuyzxcvmnb" 
 	TO "ASDFGÑLKJHQWERTPOIUYZXCVMNB"
-		MOVE SPACE TO APELLIDO.
-		PERFORM UNTIL NOT APELLIDO IS = SPACE
-		DISPLAY "Ingrese Apellido: " WITH NO ADVANCING
-		ACCEPT APELLIDO  NO BEEP
-		END-PERFORM.
 		INSPECT APELLIDO CONVERTING "asdfgñlkjhqwertpoiuyzxcvmnb" 
 	TO "ASDFGÑLKJHQWERTPOIUYZXCVMNB".
-		MOVE SPACE TO DOMICILIO.
-		PERFORM UNTIL NOT DOMICILIO IS = SPACE
-		DISPLAY "Ingrese Domicilio: " WITH NO ADVANCING
-		ACCEPT DOMICILIO  NO BEEP
-		END-PERFORM.
-      * El Telefono no es un campo obligatorio por eso no se valida.
-		DISPLAY "Ingrese Telefono: " WITH NO ADVANCING.
-		ACCEPT TELEFONO NO BEEP.
 		MOVE "A" TO ESTADO.
-      * Guardo el registro en caso de error notifico al usuario
-		WRITE REG-CLIENTE INVALID KEY 
-			PERFORM ERROR-CLIENTE-EXISTE.
+		WRITE REG-CLIENTE.
+
       *###########################################
       * ALTA-CUENTA
       * Da de alta una nueva cuenta, y la asocia al cliente actual
@@ -319,6 +317,7 @@
 		DISPLAY "¿Desea rehabilitar el Cliente: " 
 		NOMBRE-COMPLETO "? Y/N".
 		ACCEPT action NO BEEP.
+        
       * CONSULTA
       * Muestra los datos del cliente y de su cuenta
 	CONSULTA.
@@ -362,9 +361,9 @@
       *transformo la fecha del formato AAAAMMDD
       *al formato DD/MM/AAAA
 		MOVE FECHA-CREACION TO FECHA-ED
-      *como no el complador parece no devolver una fecha 
+      *como no el compilador parece no devolver una fecha 
       *con anios de 4 digitos la creamos
-      *esto hace que se pierdan fechas anterioes a 2000
+      *esto hace que se pierdan fechas anteriores a 2000
 		ADD 2000 TO ANIO
 		STRING DIA DELIMITED BY SIZE
 		"/" DELIMITED BY SIZE
@@ -399,9 +398,6 @@
 		CLOSE POLITICAS.
 
       * MENSAJES DE ERROR
-	ERROR-CLIENTE-EXISTE.
-		DISPLAY "EL CLIENTE YA EXISTE".
-
 	ERROR-CUENTA-EXISTE.
 		DISPLAY "EL CLIENTE YA TIENE UNA CUENTA".
 
@@ -420,6 +416,6 @@
 		MOVE " " TO WCB-FILL-CHAR.
 		MOVE "T" TO WCB-TITLE-LOCATION.
 		MOVE "C" TO WCB-TITLE.
-		MOVE 30 TO WCB-TITLE-LENGHT.
-		MOVE "SISTEMA DE GESTION DE CAJA DE AHORRO"
+		MOVE 5 TO WCB-TITLE-LENGHT.
+		MOVE "SAOCA"
             TO WCB-TITLE.

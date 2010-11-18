@@ -187,7 +187,7 @@
     		PERFORM INICIAR-VENTANA.
 		DISPLAY WCB LINE 2 COL 2 LOW ERASE
             	CONTROL "WINDOW-CREATE".
-            PERFORM MENU-ADMINISTRADOR UNTIL opt = 5.
+            PERFORM MENU-ADMINISTRADOR UNTIL opt = 6.
 		STOP RUN.
 
       *###############################
@@ -196,7 +196,7 @@
 
       *  MENU-ADMINISTRADOR
       * Muestra el menu con las acciones de un usuario administrador
-      * La opcion 5 sale del programa.
+      * La opcion 6 sale del programa.
 	MENU-ADMINISTRADOR.
 		DISPLAY SPACES ERASE LINE 1 LOW.
 		MOVE "Bienvenido"  TO TITULO.
@@ -206,9 +206,10 @@
 		DISPLAY "2) Activacion/Desactivacion de Cliente" COL 2 
 		LOW.
 		DISPLAY "3) Consultar Cliente" COL 2 LOW.
-		DISPLAY "4) Cargar Politicas" COL 2 LOW.
-		DISPLAY "5) Salir" COL 2 LOW.
-		ACCEPT opt LINE 10 COL 2 LOW NO BEEP.
+		DISPLAY "4) Modificar Datos Cliente" COL 2 LOW.
+		DISPLAY "5) Cargar Politicas" COL 2 LOW.
+		DISPLAY "6) Salir" COL 2 LOW.
+		ACCEPT opt LINE 11 COL 2 LOW NO BEEP.
 		EVALUATE opt 
             WHEN 1
 			MOVE "A" TO CORTE
@@ -222,6 +223,12 @@
 			WHEN 3
 			PERFORM CONSULTA
 			WHEN 4
+			OPEN I-O CLIENTES
+			OPEN I-O CUENTAS
+			PERFORM MOD-CLIENTE  UNTIL CORTE = "N"
+			CLOSE CLIENTES
+			CLOSE CUENTAS
+			WHEN 5
 			PERFORM ALTA-POLITICAS.
 
       *###########################################
@@ -247,6 +254,8 @@
 		DISPLAY "EL CLIENTE YA EXISTE" LINE 6 COL 3 LOW
 		ELSE
 		PERFORM ALTA-DAT-PERS
+		MOVE "A" TO ESTADO
+		WRITE REG-CLIENTE
       * Dar de alta la nueva cuenta
 		PERFORM ALTA-CUENTA
 		END-IF.
@@ -255,7 +264,7 @@
 		DISPLAY "Desea cargar otro cliente? (Y/N) " LINE 22 
 		COL 3 LOW
 		ACCEPT CORTE NO BEEP LINE 22 COL 36 LOW
-        INSPECT CORTE CONVERTING "yn" TO "YN".
+		INSPECT CORTE CONVERTING "yn" TO "YN"
 		END-PERFORM.
 	
 	ALTA-DAT-PERS.
@@ -269,8 +278,6 @@
 		INSPECT APELLIDO 
 		CONVERTING "asdfghjklqwertpoiuyzxcvbmn"
 	TO "ASDFGLKJHQWERTPOIUYZXCVBMN".
-		MOVE "A" TO ESTADO.
-		WRITE REG-CLIENTE.
 
       *###########################################
       * ALTA-CUENTA
@@ -458,3 +465,31 @@
 		MOVE "SAOCA"
             TO WCB-TITLE.
 
+      *###########################################
+      *MOD-CLIENTE.
+      *###########################################
+	MOD-CLIENTE.
+		DISPLAY SPACES ERASE LINE 1 LOW.
+		MOVE "MODIFICAR DATOS CLIENTE" TO TITULO.
+		DISPLAY SC-CABECERA.
+      * Fuerzo el valor 0 para el DNI.
+		MOVE 0 TO DNI.
+		PERFORM UNTIL DNI > 0
+		DISPLAY "Ingrese DNI: "  LINE 5 COL 3 LOW
+		ACCEPT SC-DNI
+		END-PERFORM.
+      * Busco si ya esta cargado.
+		PERFORM BUSCAR.
+		IF NOT find-code IS = "T" THEN
+		DISPLAY "EL CLIENTE NO EXISTE" LINE 6 COL 3 LOW
+		ELSE
+		PERFORM ALTA-DAT-PERS
+		REWRITE REG-CLIENTE
+		END-IF.
+		MOVE "A" TO CORTE.
+		PERFORM UNTIL CORTE IS = "Y" OR CORTE IS = "N"
+		DISPLAY "Desea modificar otro cliente? (Y/N) " LINE 22 
+		COL 3 LOW
+		ACCEPT CORTE NO BEEP LINE 22 COL 39 LOW
+		INSPECT CORTE CONVERTING "yn" TO "YN"
+		END-PERFORM.

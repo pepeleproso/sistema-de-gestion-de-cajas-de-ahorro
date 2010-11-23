@@ -68,7 +68,7 @@
 
 	FD OPERACIONES DATA RECORD IS REG-OPERACIONES.
 	01 REG-OPERACIONES.
-			02 NRO-OP PIC 9(8).
+            02 NRO-OP PIC 9(8).
             02 NRO-CUENTA PIC 9(8).
             02 T-OPERACION PIC 9.
             02 IMPORTE PIC 9(7)v99.
@@ -296,6 +296,10 @@
 		MOVE 0 TO SALDO.
       * leo la fecha de creacion desde el sistema
 		ACCEPT FECHA-CREACION FROM DATE.
+      *como no el compilador parece no devolver una fecha 
+      *con anios de 4 digitos la creamos
+      *esto hace que se pierdan fechas anteriores a 2000
+                ADD 20000000 TO FECHA-CREACION.
 		ACCEPT find-code.
 		WRITE REG-CUENTA 
         INVALID KEY DISPLAY "EL CLIENTE YA TIENE UNA CUENTA" LINE 22 
@@ -413,10 +417,6 @@
       *transformo la fecha del formato AAAAMMDD
       *al formato DD/MM/AAAA
 		MOVE FECHA-CREACION TO FECHA-ED
-      *como no el compilador parece no devolver una fecha 
-      *con anios de 4 digitos la creamos
-      *esto hace que se pierdan fechas anteriores a 2000
-		ADD 2000 TO ANIO
 		STRING DIA DELIMITED BY SIZE
 		"/" DELIMITED BY SIZE
 		MES DELIMITED BY SIZE 

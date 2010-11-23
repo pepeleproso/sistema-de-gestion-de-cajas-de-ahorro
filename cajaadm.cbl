@@ -17,21 +17,23 @@
 		FILE STATUS IS SK.
 
 		SELECT OPTIONAL CUENTAS ASSIGN
-        TO DISK  "CUENTAS.DAT"
+                TO DISK  "CUENTAS.DAT"
 		ORGANIZATION IS INDEXED
 		ACCESS MODE IS DYNAMIC 
 		RECORD KEY IS NRO
 		ALTERNATE RECORD KEY IS DNI-CLI
 		FILE STATUS IS SK.
 
-		SELECT OPTIONAL POLITICAS ASSIGN TO "POLITICAS.DAT"
+                SELECT OPTIONAL POLITICAS ASSIGN TO "POLITICAS.DAT"
 		FILE STATUS IS SK.
 
 		SELECT OPTIONAL OPERACIONES ASSIGN
-        TO DISK  "OPERACIONES.DAT"
+                TO DISK  "OPERACIONES.DAT"
 		ORGANIZATION IS INDEXED
 		ACCESS MODE IS DYNAMIC 
 		RECORD KEY IS NRO-OP
+		ALTERNATE RECORD KEY IS FECHA-OP 
+		WITH DUPLICATES
 		FILE STATUS IS SK.
 	
 	DATA DIVISION.
@@ -50,6 +52,7 @@
       *"A" ->ACTIVO
       *"B" -> DADO DE BAJA
 			02 ESTADO PIC A.
+                        
         FD CUENTAS
 		LABEL RECORD IS STANDARD
 		DATA RECORD IS REG-CUENTA.
@@ -57,9 +60,9 @@
         	02 NRO PIC 9(8).
         	02 DNI-CLI PIC 9(8).
       * SALDO tiene formato 9999999,99
-        	02 SALDO PIC 9(7)v99.
+                02 SALDO PIC 9(7)v99.
       * CON FORMATO AAAAMMDD
-        	02 FECHA-CREACION PIC 9(8).
+		02 FECHA-CREACION PIC 9(8).
 
 	FD POLITICAS DATA RECORD IS REG-POLITICAS.
 	01 REG-POLITICAS.
@@ -68,12 +71,12 @@
 
 	FD OPERACIONES DATA RECORD IS REG-OPERACIONES.
 	01 REG-OPERACIONES.
-            02 NRO-OP PIC 9(8).
-            02 NRO-CUENTA PIC 9(8).
-            02 T-OPERACION PIC 9.
-            02 IMPORTE PIC 9(7)v99.
-            02 CTA-ORIGEN PIC 9(8).
-            02 FECHA-OP PIC 9(8).
+		02 NRO-OP PIC 9(8).
+                02 NRO-CUENTA PIC 9(8).
+                02 T-OPERACION PIC 9.
+                02 IMPORTE PIC S9(7)v99.
+                02 CTA-ORIGEN PIC 9(8).
+                02 FECHA-OP PIC 9(8).
 
 	WORKING-STORAGE SECTION.
 	01 RAYA PIC X(70) VALUE ALL "-".
@@ -87,6 +90,7 @@
 	77 DNI-ED PIC z(8).
       * Usado como bandera para operacion de busqueda.
 	77 find-code PIC A.
+        77 IMPORTE-INT PIC 9(7)v99.
 	77 MAX-CUENTA PIC 9(8) VALUE 99999999.
 	77 NOMBRE-COMPLETO PIC A(40).
 	77 TITULO PIC X(60).
@@ -134,51 +138,51 @@
 		02 FILLER  PIC A(20)
 				TO APELLIDO LINE 6 COL 21
                 REQUIRED.
-        02 FILLER  PIC A(20)
+                02 FILLER  PIC A(20)
 				TO NOMBRE LINE 7 COL 19
                 REQUIRED.
-        02 FILLER  PIC X(20)
+                02 FILLER  PIC X(20)
 				TO DOMICILIO LINE 8 COL 22 
                 REQUIRED.
-        02 FILLER  PIC X(20)
+                02 FILLER  PIC X(20)
 				TO TELEFONO LINE 9 COL 21.
                 
 	01 SC-CABECERA.
-        02 FILLER  PIC X(70)
+                02 FILLER  PIC X(70)
 				FROM RAYA LINE 1 COL 2.
-        02 FILLER  PIC X(70)
+                02 FILLER  PIC X(70)
 				FROM TITULO LINE 2 COL 2.
-        02 FILLER  PIC X(70)
+                02 FILLER  PIC X(70)
 				FROM RAYA LINE 3 COL 2.
 
 	01 SC-DESCCLI.
-    	02 FILLER  PIC X(70)
+                02 FILLER  PIC X(70)
 				FROM RAYA LINE 1 COL 2.
-        02 FILLER  PIC X(70)
+                02 FILLER  PIC X(70)
 				FROM TITULO LINE 2 COL 2.
-        02 FILLER  PIC X(70)
+                02 FILLER  PIC X(70)
 				FROM RAYA LINE 3 COL 2.
-        02 FILLER  PIC A(9)
+                02 FILLER  PIC A(9)
 				FROM "Cliente: " LINE 4 COL 2.
-        02 FILLER  PIC A(40)
+                02 FILLER  PIC A(40)
 				FROM NOMBRE-COMPLETO LINE 4 COL 11.
-        02 FILLER  PIC A(5)
+                02 FILLER  PIC A(5)
 				FROM "DNI: "  LINE 5 COL 2.
-        02 FILLER  PIC X(20)
+                02 FILLER  PIC X(20)
 				FROM DNI-ED LINE 5 COL 7.
-        02 FILLER  PIC A(10)
+                02 FILLER  PIC A(10)
 				FROM "Domicilio: "  LINE 6 COL 2.
-        02 FILLER  PIC X(20)
+                02 FILLER  PIC X(20)
 				FROM DOMICILIO LINE 6 COL 13.
-        02 FILLER  PIC A(10)
+                02 FILLER  PIC A(10)
 				FROM "Telefono: "  LINE 7 COL 2.
-        02 FILLER  PIC X(20)
+                02 FILLER  PIC X(20)
 				FROM TELEFONO LINE 7 COL 12.
 	01 SC-POLITICAS.
-    	02 FILLER  PIC 9(2)
+                02 FILLER  PIC 9(2)
 				TO PORC-COMISION LINE 5 
 				COL 35 REQUIRED.
-        02 FILLER  PIC 9(2)
+                02 FILLER  PIC 9(2)
 				TO PORC-INTERES LINE 7 
 				COL 35 REQUIRED.
                 
@@ -187,7 +191,7 @@
     		PERFORM INICIAR-VENTANA.
 		DISPLAY WCB LINE 2 COL 2 LOW ERASE
             	CONTROL "WINDOW-CREATE".
-            PERFORM MENU-ADMINISTRADOR UNTIL opt = 6.
+                PERFORM MENU-ADMINISTRADOR UNTIL opt = 7.
 		STOP RUN.
 
       *###############################
@@ -196,7 +200,6 @@
 
       *  MENU-ADMINISTRADOR
       * Muestra el menu con las acciones de un usuario administrador
-      * La opcion 6 sale del programa.
 	MENU-ADMINISTRADOR.
 		DISPLAY SPACES ERASE LINE 1 LOW.
 		MOVE "Bienvenido"  TO TITULO.
@@ -208,10 +211,11 @@
 		DISPLAY "3) Consultar Cliente" COL 2 LOW.
 		DISPLAY "4) Modificar Datos Cliente" COL 2 LOW.
 		DISPLAY "5) Cargar Politicas" COL 2 LOW.
-		DISPLAY "6) Salir" COL 2 LOW.
-		ACCEPT opt LINE 11 COL 2 LOW NO BEEP.
+                DISPLAY "6) Acreditar Intereses" COL 2 LOW.
+		DISPLAY "7) Salir" COL 2 LOW.
+		ACCEPT opt LINE 12 COL 2 LOW NO BEEP.
 		EVALUATE opt 
-            WHEN 1
+                        WHEN 1
 			MOVE "A" TO CORTE
 			OPEN I-O CLIENTES
 			OPEN I-O CUENTAS
@@ -229,7 +233,13 @@
 			CLOSE CLIENTES
 			CLOSE CUENTAS
 			WHEN 5
-			PERFORM ALTA-POLITICAS.
+			PERFORM ALTA-POLITICAS
+                        WHEN 6
+			OPEN I-O CLIENTES
+			OPEN I-O CUENTAS
+                        PERFORM ACREDITAR-INTERESES
+			CLOSE CLIENTES
+			CLOSE CUENTAS.
 
       *###########################################
       * ALTA-CLIENTE
@@ -273,11 +283,11 @@
 		DISPLAY "Ingrese Domicilio: " LINE 8 COL 3 LOW.
 		DISPLAY "Ingrese Telefono: " LINE 9 COL 3 LOW.
 		ACCEPT SC-DATOSCLI.
-		INSPECT NOMBRE CONVERTING "asdfghjklqwertpoiuyzxcvbmn" 
-	TO "ASDFGLKJHQWERTPOIUYZXCVBMN".
+		INSPECT NOMBRE CONVERTING "qwertyuiopasdfghjklzxcvbnm"
+	TO "QWERTYUIOPASDFGHJKLZXCVBNM".
 		INSPECT APELLIDO 
-		CONVERTING "asdfghjklqwertpoiuyzxcvbmn"
-	TO "ASDFGLKJHQWERTPOIUYZXCVBMN".
+		CONVERTING "qwertyuiopasdfghjklzxcvbnm"
+	TO "QWERTYUIOPASDFGHJKLZXCVBNM".
 
       *###########################################
       * ALTA-CUENTA
@@ -290,7 +300,7 @@
 		INVALID KEY MOVE 0 TO NRO END-START
 		IF NOT NRO IS = 0 THEN
 		READ CUENTAS NEXT RECORD AT END MOVE 0 TO NRO
-      	END-IF
+                END-IF
 		ADD 1 TO NRO.
 		MOVE DNI TO DNI-CLI.
 		MOVE 0 TO SALDO.
@@ -302,8 +312,8 @@
                 ADD 20000000 TO FECHA-CREACION.
 		ACCEPT find-code.
 		WRITE REG-CUENTA 
-        INVALID KEY DISPLAY "EL CLIENTE YA TIENE UNA CUENTA" LINE 22 
-        COL 3 LOW.
+                INVALID KEY DISPLAY "EL CLIENTE YA TIENE UNA CUENTA"
+                LINE 22 COL 3 LOW.
 		
 	BUSCAR.
       * forzar un codigo para siempre realizar la busqueda.
@@ -493,3 +503,59 @@
 		ACCEPT CORTE NO BEEP LINE 22 COL 39 LOW
 		INSPECT CORTE CONVERTING "yn" TO "YN"
 		END-PERFORM.
+
+      *IMPORTANTE: para realizar esta operacion el archivo tiene que estar abierto.
+        OBTENER-SIGUIENTE-OP.
+      *BUSCO el ultimo numero de operacion y le sumo 1.
+		MOVE MAX-CUENTA TO NRO-OP.
+		START OPERACIONES KEY IS LESS NRO-OP
+		INVALID KEY MOVE 0 TO NRO-OP END-START
+		IF NOT NRO-OP IS = 0 THEN
+		READ OPERACIONES NEXT RECORD AT END MOVE 0 TO NRO-OP
+                END-IF.
+		ADD 1 TO NRO-OP.
+
+        ACREDITAR-INTERESES.
+ 		DISPLAY SPACES ERASE LINE 1 LOW.
+		MOVE "MODIFICAR DATOS CLIENTE" TO TITULO.
+		DISPLAY SC-CABECERA.
+      * Fuerzo el valor 0 para el DNI.
+		MOVE 0 TO DNI.
+		PERFORM UNTIL DNI > 0
+		DISPLAY "Ingrese DNI: "  LINE 5 COL 3 LOW
+		ACCEPT SC-DNI
+		END-PERFORM.
+      * Busco si ya esta cargado.
+		PERFORM BUSCAR.
+		IF NOT find-code IS = "T" THEN
+		DISPLAY "EL CLIENTE NO EXISTE" LINE 6 COL 3 LOW
+		ELSE
+                OPEN INPUT POLITICAS
+                READ POLITICAS AT END MOVE 0 TO PORC-INTERES
+                END-READ
+		MOVE DNI TO DNI-CLI
+		START CUENTAS KEY IS = DNI-CLI
+		READ CUENTAS NEXT RECORD
+                COMPUTE IMPORTE-INT = SALDO * PORC-INTERES / 100
+                OPEN I-O OPERACIONES
+                PERFORM OBTENER-SIGUIENTE-OP
+      * Id = 5  "Acreditacion de intereses"
+		MOVE 5 TO T-OPERACION
+		MOVE 0 TO CTA-ORIGEN
+                MOVE IMPORTE-INT TO IMPORTE
+                MOVE NRO TO NRO-CUENTA
+                COMPUTE SALDO = SALDO + IMPORTE-INT
+                CLOSE POLITICAS
+		MOVE "A" TO CORTE
+		PERFORM UNTIL CORTE IS = "Y" OR CORTE IS = "N"
+		DISPLAY "Desea Acreditar Intereses? (Y/N) " LINE 7 
+		COL 3 LOW
+		ACCEPT CORTE NO BEEP LINE 7 COL 39 LOW
+		INSPECT CORTE CONVERTING "yn" TO "YN"
+                END-PERFORM
+                IF CORTE IS = "Y" THEN
+		REWRITE REG-CUENTA
+		WRITE REG-OPERACIONES
+                END-IF
+                CLOSE OPERACIONES
+                END-IF.
